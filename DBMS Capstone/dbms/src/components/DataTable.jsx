@@ -1,0 +1,240 @@
+
+import { Search, Plus, Inbox, Pencil, Trash2 } from "lucide-react"
+import { useMemo, useState } from "react"
+import StatusBadge from "./StatusBadge"
+
+
+
+
+const renderCellValue = (value, column) => {
+  if (value == null || value === "") return "—"
+
+  if (typeof value === "string") {
+    const isoMatch = value.match(
+      /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/
+    )
+
+    if (isoMatch) {
+      const [, year, month, day, hour, minute] = isoMatch
+      const hours24 = Number(hour)
+      const hours12 = hours24 % 12 || 12
+      const period = hours24 >= 12 ? "PM" : "AM"
+
+      return `${day}-${month}-${year}, ${hours12}:${minute} ${period}`
+    }
+
+    if (column?.date) {
+      const dateMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+
+      if (dateMatch) {
+        const [, year, month, day] = dateMatch
+        return `${day}-${month}-${year}`
+      }
+    }
+  }
+
+  if (typeof value === "object") {
+    if (Array.isArray(value)) {
+      return value.map((item) => String(item)).join(", ") || "—"
+    }
+
+    return value.name ?? value.label ?? value.title ?? "—"
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Yes" : "No"
+  }
+
+  return value
+}
+
+
+
+
+export default function DataTable({
+  title,
+  description,
+  columns,
+  data,
+  searchKeys = [],
+  onAdd,
+  addLabel = "Add Record",
+  onEdit,
+  onDelete,
+  deletingId
+}) {
+  const [search, setSearch] = useState("")
+
+  const filteredData = useMemo(() => {
+    const term = search.toLowerCase().trim()
+
+    if (!term) return data
+
+    return data.filter((row) =>
+      searchKeys.some((key) => {
+        const value = row[key]
+
+        if (value == null) return false
+
+        const searchableValue =
+          typeof value === "object"
+            ? JSON.stringify(value)
+            : String(value)
+
+        return searchableValue.toLowerCase().includes(term)
+      })
+    )
+  }, [data, search, searchKeys])
+
+  const hasActions = Boolean(onEdit || onDelete)
+  const totalColumns = columns.length + (hasActions ? 1 : 0)
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[#f0e2dc] bg-white shadow-sm">
+      <div className="flex flex-col gap-4 border-b border-[#f5e9e4] p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="font-bold text-[#332624]">{title}</h2>
+          <p className="mt-1 text-sm text-[#806e69]">{description}</p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <label className="flex items-center gap-2 rounded-xl border border-[#f0e2dc] bg-[#fff7f3] px-3 py-2">
+            <Search size={16} className="text-[#806e69]" />
+            <input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search records..."
+              className="w-36 bg-transparent text-sm outline-none sm:w-44"
+            />
+          </label>
+
+          {onAdd && (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="flex items-center gap-2 rounded-xl bg-[#ef553b] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#d9442f]"
+            >
+              <Plus size={17} />
+              {addLabel}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[650px] text-left text-sm">
+          <thead className="bg-[#fff7f3] text-xs text-[#806e69]">
+            <tr>
+              {columns.map((column) => (
+                <th
+                  key={column.key}
+                  className="whitespace-nowrap px-5 py-4 font-semibold"
+                >
+                  {column.label}
+                </th>
+              ))}
+
+              {hasActions && (
+                <th className="whitespace-nowrap px-5 py-4 font-semibold">
+                  Actions
+                </th>
+              )}
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredData.map((row, index) => (
+              <tr
+                key={
+                  row.id ??
+                  row.resident_id ??
+                  row.apartment_id ??
+                  row.parking_id ??
+                  row.amenity_id ??
+                  index
+                }
+                className="border-t border-[#f5e9e4] transition hover:bg-[#fff7f3]"
+              >
+                {columns.map((column) => {
+                  const value = row[column.key]
+
+                  return (
+                    <td
+                      key={column.key}
+                      className="px-5 py-4 text-[#725b54]"
+                    >
+                      {column.render ? (
+                        column.render(value, row)
+                      ) : column.status ? (
+                        <StatusBadge status={renderCellValue(value, column)} />
+                      ) : (
+                        renderCellValue(value, column)
+                      )}
+                    </td>
+                  )
+                })}
+
+                {hasActions && (
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2">
+                      {onEdit && (
+                        <button
+                          type="button"
+                          onClick={() => onEdit(row)}
+                          title="Edit record"
+                          aria-label={`Edit record ${row.id ?? ""}`}
+                          className="rounded-lg border border-[#eedbd3] p-2 text-[#725b54] transition hover:bg-[#fff0e9] hover:text-[#d9442f]"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
+
+                      {onDelete && (
+                        <button
+                          type="button"
+                          onClick={() => onDelete(row)}
+                          disabled={deletingId === row.id}
+                          title="Delete record"
+                          aria-label={`Delete record ${row.id ?? ""}`}
+                          className="rounded-lg border border-red-100 p-2 text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {deletingId === row.id ? (
+                            <span className="text-xs">...</span>
+                          ) : (
+                            <Trash2 size={16} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+
+            {filteredData.length === 0 && (
+              <tr>
+                <td
+                  colSpan={totalColumns}
+                  className="px-5 py-14 text-center"
+                >
+                  <Inbox size={28} className="mx-auto text-[#a8958e]" />
+                  <p className="mt-3 text-sm font-medium text-[#725b54]">
+                    No matching records found
+                  </p>
+                  <p className="mt-1 text-xs text-[#a8958e]">
+                    Try another search term.
+                  </p>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex items-center justify-between border-t border-[#f5e9e4] px-5 py-3 text-xs text-[#806e69]">
+        <span>{filteredData.length} record(s)</span>
+        <span></span>
+      </div>
+    </section>
+  )
+}
