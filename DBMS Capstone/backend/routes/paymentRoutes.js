@@ -1,19 +1,38 @@
 
-import express from "express"
+import express from "express";
+
 import {
   getPayments,
   getPayment,
   addPayment,
   editPayment,
-  removePayment
-} from "../controllers/paymentController.js"
+  removePayment,
+  uploadPaymentProof,
+  createRazorpayOrder,
+  verifyRazorpayPayment
+} from "../controllers/paymentController.js";
 
-const router = express.Router()
+import upload from "../middleware/upload.js";
 
-router.get("/", getPayments)
-router.get("/:id", getPayment)
-router.post("/", addPayment)
-router.put("/:id", editPayment)
-router.delete("/:id", removePayment)
+const router = express.Router();
 
-export default router
+router.get("/", getPayments);
+router.get("/:id", getPayment);
+
+// Cloudinary payment proof
+router.post(
+  "/:id/proof",
+  upload.single("proof"),
+  uploadPaymentProof
+);
+
+// Razorpay
+router.post("/razorpay/order", createRazorpayOrder);
+router.post("/razorpay/verify", verifyRazorpayPayment);
+
+// Existing CRUD
+router.post("/", addPayment);
+router.put("/:id", editPayment);
+router.delete("/:id", removePayment);
+
+export default router;

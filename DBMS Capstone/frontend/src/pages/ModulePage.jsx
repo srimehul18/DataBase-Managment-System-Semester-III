@@ -19,7 +19,8 @@ export default function ModulePage({
   resident,
   allowAdd,
   allowEdit,
-  allowDelete
+  allowDelete,
+  allowUploadProof = false
 }) {
   const [records, setRecords] = useState(initialData)
   const [modalOpen, setModalOpen] = useState(false)
@@ -28,6 +29,7 @@ export default function ModulePage({
   const [loading, setLoading] = useState(Boolean(apiEndpoint))
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState(null)
+  const [uploadingId, setUploadingId] = useState(null)
   const [error, setError] = useState("")
   const [fieldOptions, setFieldOptions] = useState({})
 
@@ -280,6 +282,62 @@ export default function ModulePage({
     }
   }
 
+
+  async function handleUploadProof(record, file) {
+    if (!allowUploadProof || !file) return
+
+    const allowedTypes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ]
+
+    if (!allowedTypes.includes(file.type)) {
+      setError("Only JPG, PNG and WEBP images are allowed.")
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size must not exceed 5 MB.")
+      return
+    }
+
+    setError("")
+    setUploadingId(record.id)
+
+    try {
+      const formData = new FormData()
+      formData.append("proof", file)
+
+      const response = await fetch(
+        `${API_BASE}${apiEndpoint}/${record.id}/proof`,
+        {
+          method: "POST",
+          body: formData
+        }
+      )
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(
+          result.message || "Unable to upload payment proof."
+        )
+      }
+
+      setRecords((current) =>
+        current.map((item) =>
+          item.id === record.id ? result.payment : item
+        )
+      )
+    } catch (err) {
+      setError(err.message || "Payment proof upload failed.")
+    } finally {
+      setUploadingId(null)
+    }
+  }
+
+
   async function handleDelete(record) {
     if (!canDelete) return
 
@@ -395,6 +453,10 @@ export default function ModulePage({
           onEdit={canEdit ? openEditForm : undefined}
           onDelete={canDelete ? handleDelete : undefined}
           deletingId={deletingId}
+          onUploadProof={
+            allowUploadProof ? handleUploadProof : undefined
+          }
+          uploadingId={uploadingId}
         />
       )}
 

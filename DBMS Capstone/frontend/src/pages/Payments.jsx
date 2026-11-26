@@ -1,6 +1,7 @@
 
 import ModulePage from "./ModulePage"
 
+
 const columns = [
   { key: "id", label: "Payment ID" },
   { key: "resident", label: "Resident" },
@@ -8,8 +9,28 @@ const columns = [
   { key: "payDate", label: "Payment Date", date: true },
   { key: "amount", label: "Amount" },
   { key: "method", label: "Method" },
-  { key: "status", label: "Status", status: true }
+  { key: "status", label: "Status", status: true },
+  {
+    key: "paymentProofUrl",
+    label: "Payment Proof",
+    render: (value) =>
+      value ? (
+        <a
+          href={value}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-semibold text-[#ef553b] hover:text-[#d9442f] hover:underline"
+        >
+          View Proof
+        </a>
+      ) : (
+        <span className="text-[#a8958e]">
+          Not uploaded
+        </span>
+      )
+  }
 ]
+
 
 export default function Payments({ role, resident }) {
   return (
@@ -34,6 +55,9 @@ export default function Payments({ role, resident }) {
       allowAdd={role === "Secretary" || role === "Resident"}
       allowEdit={role === "Secretary" || role === "Resident"}
       allowDelete={role === "Secretary"}
+      allowUploadProof={
+        role === "Secretary" || role === "Resident"
+      }
       fields={[
         {
           key: "billId",

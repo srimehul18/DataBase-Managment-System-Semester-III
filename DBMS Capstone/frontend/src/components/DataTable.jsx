@@ -1,5 +1,12 @@
 
-import { Search, Plus, Inbox, Pencil, Trash2 } from "lucide-react"
+import {
+  Search,
+  Plus,
+  Inbox,
+  Pencil,
+  Trash2,
+  Upload
+} from "lucide-react"
 import { useMemo, useState } from "react"
 import StatusBadge from "./StatusBadge"
 
@@ -61,7 +68,9 @@ export default function DataTable({
   addLabel = "Add Record",
   onEdit,
   onDelete,
-  deletingId
+  deletingId,
+  onUploadProof,
+  uploadingId
 }) {
   const [search, setSearch] = useState("")
 
@@ -86,7 +95,9 @@ export default function DataTable({
     )
   }, [data, search, searchKeys])
 
-  const hasActions = Boolean(onEdit || onDelete)
+  const hasActions = Boolean(
+  onEdit || onDelete || onUploadProof
+)
   const totalColumns = columns.length + (hasActions ? 1 : 0)
 
   return (
@@ -177,6 +188,40 @@ export default function DataTable({
                 {hasActions && (
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2">
+
+{onUploadProof && (
+  <label
+    title="Upload payment proof"
+    className={`cursor-pointer rounded-lg border border-[#eedbd3] p-2 text-[#ef553b] transition hover:bg-[#fff0e9] ${
+      uploadingId === row.id
+        ? "pointer-events-none opacity-50"
+        : ""
+    }`}
+  >
+    {uploadingId === row.id ? (
+      <span className="px-1 text-xs">...</span>
+    ) : (
+      <Upload size={16} />
+    )}
+
+    <input
+      type="file"
+      accept="image/jpeg,image/png,image/webp"
+      className="hidden"
+      disabled={uploadingId === row.id}
+      onChange={(event) => {
+        const file = event.target.files?.[0]
+
+        if (file) {
+          onUploadProof(row, file)
+        }
+
+        event.target.value = ""
+      }}
+    />
+  </label>
+)}
+
                       {onEdit && (
                         <button
                           type="button"
